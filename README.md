@@ -3,7 +3,7 @@
 A desktop companion for **Claude Code**. It sits on your desktop, shows what Claude Code is doing in your persona's voice, and keeps an eye on your plan limits and your machine.
 
 - **Live agent state** through Claude Code hooks: thinking, reading, running commands, editing, waiting on you, done. Each activity gets its own mood animation and phrase ("Following the scent…", "Burrowing…").
-- **Status footer:** CPU / GPU / RAM load, temperature and power in one table, then your Claude 5-hour and weekly usage with reset times, and tokens used today.
+- **Status footer:** CPU / GPU / RAM load, temperature and power in one table, then your Claude 5-hour and weekly usage (and Codex, if you use it) as plain percentages with reset times, and tokens used today.
 - **Persona packs:** your character, 9 moods × 10 frames, plus the phrases they say. Generate the art with the image provider you choose.
 - **Plugins** for anything else you want it to watch (an alert file from your own tooling, for example).
 
@@ -72,9 +72,10 @@ Tips: image models drift, so expect to rerun one or two moods. Some return a dif
 | GPU load, temp, power | `nvidia-smi` (NVIDIA only for now) |
 | CPU temp and power | [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) with its Remote Web Server on (port 8085). Windows exposes neither without admin rights; shows "–" otherwise |
 | Claude 5h / week | the plan-usage endpoint behind Claude Code's `/usage`, read with the OAuth token Claude Code already stores locally. Read-only, polled every 3 min. This endpoint is not a documented public API and may change |
+| Codex window % | the rate-limit endpoint behind the Codex CLI's `/status`, read with the token the Codex CLI stores in `~/.codex/auth.json`. Row is hidden when Codex isn't signed in. Also undocumented |
 | Tokens today | summed from your local Claude Code transcripts (`~/.claude/projects`) |
 
-Nothing leaves your machine except that one usage request to Anthropic (and image requests to the provider you pick when generating art).
+Nothing leaves your machine except those usage requests (Anthropic, and OpenAI if Codex is signed in) (and image requests to the provider you pick when generating art).
 
 ## Roadmap
 
