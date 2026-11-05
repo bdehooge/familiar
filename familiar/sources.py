@@ -5,7 +5,7 @@
 - tokens_today():  tokens Claude Code used today, summed from local transcripts
 - claude_code():   what Claude Code is doing right now (written by familiar.hook)
 """
-import datetime, glob, json, os, subprocess, time, urllib.request
+import datetime, glob, json, os, struct, subprocess, time, urllib.request
 
 HOME = os.path.expanduser("~")
 CC_STATE = os.path.join(HOME, ".familiar", "cc_state.json")
@@ -52,14 +52,77 @@ def _lhm():
     return out
 
 
+def parse_mahm(buf):
+    """MSI Afterburner hardware-monitor shared memory -> {source name: value}. Layout: v2 header
+    (signature 'MAHM', version, header size, entry count, entry size), then entries of
+    name[260] units[260] localName[260] localUnits[260] format[260] data:float ..."""
+    sig, _ver, hsize, n, esize = struct.unpack_from("<IIIII", buf, 0)
+    if sig != 0x4D41484D:
+        return {}
+    out = {}
+    for i in range(n):
+        o = hsize + i * esize
+        name = bytes(buf[o:o + 260]).split(b"\0")[0].decode("latin1")
+        out[name] = struct.unpack_from("<f", buf, o + 1300)[0]
+    return out
+
+
+def _afterburner():
+    """Read MSI Afterburner's hardware monitor (Windows, Afterburner running, no admin needed).
+    Must run in the user's desktop session, which the pet always does. Returns {} when unavailable."""
+    if os.name != "nt":
+        return {}
+    import ctypes
+    from ctypes import wintypes
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.OpenFileMappingW.restype = wintypes.HANDLE
+    k.MapViewOfFile.restype = ctypes.c_void_p
+    k.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    h = k.OpenFileMappingW(0x0004, False, "MAHMSharedMemory")  # FILE_MAP_READ
+    if not h:
+        return {}
+    try:
+        p = k.MapViewOfFile(h, 0x0004, 0, 0, 0)
+        if not p:
+            return {}
+        try:
+            _s, _v, hsize, n, esize = struct.unpack("<IIIII", ctypes.string_at(p, 20))
+            return parse_mahm(ctypes.string_at(p, hsize + n * esize))
+        finally:
+            k.UnmapViewOfFile(p)
+    finally:
+        k.CloseHandle(h)
+
+
 def system():
-    s = {"cpu": {}, "gpu": {}, "ram": {}}
+    """Footer table data. Sources, best first: MSI Afterburner (CPU temp/power, any GPU), LibreHardwareMonitor's
+    web server (CPU temp/power), nvidia-smi (NVIDIA GPU), psutil (CPU/RAM load). s["sensors"] names the CPU
+    sensor source, or None when nothing reads CPU temperature (the app hides the table by default then)."""
+    s = {"cpu": {}, "gpu": {}, "ram": {}, "sensors": None}
     if psutil:
         s["cpu"]["load"] = psutil.cpu_percent(interval=None)
         vm = psutil.virtual_memory()
         s["ram"] = {"load": vm.percent, "free_gb": vm.available / 2**30, "total_gb": vm.total / 2**30}
-    lhm = _lhm()
-    s["cpu"]["temp"], s["cpu"]["power"] = lhm.get("cpu_temp"), lhm.get("cpu_power")
+    ab = {}
+    try:
+        ab = _afterburner()
+    except Exception:
+        pass
+    if ab.get("CPU temperature") is not None:
+        s["cpu"]["temp"], s["cpu"]["power"], s["sensors"] = ab.get("CPU temperature"), ab.get("CPU power"), "afterburner"
+        if s["cpu"].get("load") is None:
+            s["cpu"]["load"] = ab.get("CPU usage")
+    else:
+        lhm = _lhm()
+        s["cpu"]["temp"], s["cpu"]["power"] = lhm.get("cpu_temp"), lhm.get("cpu_power")
+        if lhm.get("cpu_temp") is not None:
+            s["sensors"] = "librehardwaremonitor"
+    # Non-NVIDIA fallback: Afterburner's busiest GPU (nvidia-smi below overwrites this when present)
+    gpus = sorted({k.split()[0] for k in ab if k.startswith("GPU") and k.split()[0][3:].isdigit()})
+    if gpus:
+        g = max(gpus, key=lambda x: ab.get(x + " memory usage") or 0)
+        s["gpu"] = {"load": ab.get(g + " usage"), "temp": ab.get(g + " temperature"), "power": ab.get(g + " power")}
     try:
         q = "utilization.gpu,temperature.gpu,power.draw,memory.used,memory.total"
         line = subprocess.run(["nvidia-smi", "--query-gpu=" + q, "--format=csv,noheader,nounits"], capture_output=True,

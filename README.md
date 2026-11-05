@@ -58,6 +58,7 @@ Tips: image models drift, so expect to rerun one or two moods. Some return a dif
 {
   "persona": "C:/Users/you/familiar/personas/orion",
   "stats": true,
+  "hardware": "auto",
   "plugins": {
     "alert_file": {"path": "C:/path/to/ALERT.txt", "meanings": {"disk": {"text": "Disk almost full ({msg})", "alarm": true}}}
   }
@@ -69,8 +70,10 @@ Tips: image models drift, so expect to rerun one or two moods. Some return a dif
 | Footer cell | Source |
 |---|---|
 | CPU / RAM load, RAM free | `psutil` |
-| GPU load, temp, power | `nvidia-smi` (NVIDIA only for now) |
-| CPU temp and power | [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) with its Remote Web Server on (port 8085). Windows exposes neither without admin rights; shows "–" otherwise |
+| GPU load, temp, power | `nvidia-smi` (NVIDIA), else MSI Afterburner (any GPU) |
+| CPU temp and power | [MSI Afterburner](https://www.msi.com/Landing/afterburner/graphics-cards) running (works with any brand of GPU; read from its hardware-monitor shared memory, no admin needed), or [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) with Options > Remote Web Server on (port 8085). Windows exposes neither without admin rights |
+
+The CPU / GPU / RAM table is optional. By default (`"hardware": "auto"`) it appears once Afterburner or LibreHardwareMonitor is found; right-click > Hardware table pins it on or off. The Claude / Codex rows always show with the footer.
 | Claude 5h / week | the plan-usage endpoint behind Claude Code's `/usage`, read with the OAuth token Claude Code already stores locally. Read-only, polled every 3 min. This endpoint is not a documented public API and may change |
 | Codex window % | the rate-limit endpoint behind the Codex CLI's `/status`, read with the token the Codex CLI stores in `~/.codex/auth.json`. Row is hidden when Codex isn't signed in. Also undocumented |
 | Tokens today | summed from your local Claude Code transcripts (`~/.claude/projects`) |

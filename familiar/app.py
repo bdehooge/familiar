@@ -100,6 +100,9 @@ class Familiar:
         if "idle" not in self.sprites:
             raise SystemExit("persona has no idle frames: " + persona.folder)
         self.show_stats = cfg.get("stats", True)
+        # Hardware table: "auto" (default) shows it once a CPU sensor source (Afterburner / LibreHardwareMonitor)
+        # is found; true/false pins it. The usage rows below it always show with the footer.
+        self.hardware = cfg.get("hardware", "auto")
         self.dismissed = cfg.get("dismissed", "")
         self.x, self.y = self.default_pos()
         self.mood, self.mood_t0 = "idle", time.time()
@@ -121,7 +124,7 @@ class Familiar:
     # -- persistence
     def save(self):
         c = load_cfg()
-        c.update(x=self.x, y=self.y, stats=self.show_stats, dismissed=self.dismissed)
+        c.update(x=self.x, y=self.y, stats=self.show_stats, hardware=self.hardware, dismissed=self.dismissed)
         os.makedirs(CFG_DIR, exist_ok=True)
         with open(CFG, "w", encoding="utf-8") as f:
             json.dump(c, f, indent=2)
@@ -271,7 +274,13 @@ class Familiar:
         if not self.show_stats:
             return None
         d = self.poller.data
-        return {"system": d.get("system"), "claude": d.get("claude"), "codex": d.get("codex"), "tokens": d.get("tokens"), "err": d.get("err")}
+        return {"system": d.get("system"), "claude": d.get("claude"), "codex": d.get("codex"), "tokens": d.get("tokens"),
+                "err": d.get("err"), "hardware": self.hardware_on()}
+
+    def hardware_on(self):
+        if self.hardware == "auto":
+            return bool(((self.poller.data.get("system") or {}).get("sensors")))
+        return bool(self.hardware)
 
     def render(self, force=False):
         if time.time() > self.bubble_until:
@@ -309,6 +318,8 @@ class Familiar:
     def menu(self):
         m = user32.CreatePopupMenu()
         user32.AppendMenuW(m, 0x8 if self.show_stats else 0, 1, "Show status footer")
+        if self.show_stats:
+            user32.AppendMenuW(m, 0x8 if self.hardware_on() else 0, 3, "  Hardware table (CPU / GPU / RAM)")
         user32.AppendMenuW(m, 0, 2, "Hide for 1 hour")
         if self.poller.data.get("alerts"):
             user32.AppendMenuW(m, 0x800, 0, None)
@@ -326,6 +337,11 @@ class Familiar:
             self.show_stats = not self.show_stats
             self.save()
             user32.SetWindowPos(self.hwnd, None, self.x, self.y, render.CW, self.ch(), 0x0004 | 0x0010)
+        elif cmd == 3:
+            self.hardware = not self.hardware_on()
+            self.save()
+            if self.hardware and not (self.poller.data.get("system") or {}).get("sensors"):
+                self.say("No CPU sensors found. Run MSI Afterburner (or LibreHardwareMonitor's web server) for CPU temp and power.", 10)
         elif cmd == 2:
             self.hidden_until = time.time() + 3600
         elif cmd == 4:
