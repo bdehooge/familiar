@@ -88,6 +88,8 @@ Nothing leaves your machine except those usage requests (Anthropic, and OpenAI i
 - AMD / Intel GPU stats
 - A tiny OpenClaw bridge plugin, so OpenClaw sessions drive the same moods
 - Persona gallery
+- Opt-in `claude --settings familiar-hooks.json` mode for people who launch Claude Code from a wrapper, so settings.json is never touched
+- Hookless fallback that reads Claude Code's terminal title (spinner while working, `✳` when idle)
 
 ## Layout
 
