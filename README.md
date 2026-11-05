@@ -2,6 +2,8 @@
 
 A desktop companion for **Claude Code**. It sits on your desktop, shows what Claude Code is doing in your persona's voice, and keeps an eye on your plan limits and your machine.
 
+![Orion, the bundled persona, going through all 9 moods and a Claude Code prompt](docs/demo.gif)
+
 - **Live agent state** through Claude Code hooks: thinking, reading, running commands, editing, waiting on you, done. Each activity gets its own mood animation and phrase ("Following the scent…", "Burrowing…").
 - **Status footer:** CPU / GPU / RAM load, temperature and power in one table, then your Claude 5-hour and weekly usage (and Codex, if you use it) as plain percentages with reset times, and tokens used today.
 - **Persona packs:** your character, 9 moods × 10 frames, plus the phrases they say. Generate the art with the image provider you choose.
@@ -12,7 +14,7 @@ Windows only for now (layered Win32 window). macOS/Linux is on the roadmap below
 ## Install
 
 ```powershell
-git clone <this repo>; cd familiar
+git clone https://github.com/bdehooge/familiar; cd familiar
 pip install -e .
 python -m familiar.install      # adds hooks to ~/.claude/settings.json (backs it up first)
 pythonw -m familiar             # start it (uses personas/orion until you set your own)
