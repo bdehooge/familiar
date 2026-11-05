@@ -102,3 +102,11 @@ tools/generate.py      art generation (gemini | openai | manual)
 tools/frames.py        key, cut, scale and align sheets into frames; previews
 personas/orion/        example persona
 ```
+
+## Tip jar
+
+Familiar is free and MIT-licensed. If it made your desk a little friendlier and you'd like to say thanks:
+
+- SOL: `DETQrWCKbFPqnM25W8DSoDg62ZsgTumTbn2hzrxZCA2e`
+- BTC: `bc1pffe6appnq6w8g68q8rcdzw9fmyxk2hcl3j87w2f8jcy5ucgsw0wqn3wxtc`
+- ETH: `0x88AD23C103A25A4F1a730212CC290B55Afb0404A`
