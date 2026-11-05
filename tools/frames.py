@@ -32,6 +32,21 @@ def cells(rgba, cols, rows):
     """Crop the main subject out of each grid cell (drops stray specks), row-major order."""
     H, W = rgba.shape[:2]
     mask = rgba[..., 3] > 60
+    # Image models often draw grid lines between cells despite the prompt. A row/column that is almost entirely
+    # non-background is a line (characters never span the whole sheet): clear it plus a small band around it.
+    # Checked per band of cells, since hand-drawn lines wander a few pixels between rows.
+    lines = np.zeros_like(mask)
+    for r in range(rows):
+        y0, y1 = r * H // rows, (r + 1) * H // rows
+        lines[y0:y1, mask[y0:y1].mean(axis=0) > 0.9] = True
+    for c in range(cols):
+        x0, x1 = c * W // cols, (c + 1) * W // cols
+        lines[mask[:, x0:x1].mean(axis=1) > 0.9, x0:x1] = True
+    if lines.any():
+        lines = ndimage.binary_dilation(lines, iterations=6)
+        mask &= ~lines
+        rgba = rgba.copy()
+        rgba[..., 3] = np.where(lines, 0, rgba[..., 3])
     lab, _ = ndimage.label(ndimage.binary_dilation(mask, iterations=12))
     out = []
     for i in range(cols * rows):
@@ -121,8 +136,10 @@ def cmd_anim(a):
         sys.exit("run `base` first: missing " + base_p)
     base = np.asarray(Image.open(base_p).convert("RGBA"))
     cs = [c for c in cells(key_green(a.sheet), cols, rows) if c is not None]
-    # Scale the animation to the base pose using the median body height (robust to one stretched frame).
-    k = base.shape[0] / float(np.median([c.shape[0] for c in cs]))
+    # Scale the animation to the base pose by body area (sqrt), median over frames: robust to wide/flat poses and
+    # to one stretched frame, where bounding-box height is not.
+    area = lambda a: float((a[..., 3] > 128).sum())
+    k = (area(base) / float(np.median([area(c) for c in cs]))) ** 0.5
     cs = [resize(c, k) for c in cs]
     imgs, shifts = register([base] + cs)
     for f in glob.glob(os.path.join(a.out, a.mood + "_*.png")):
