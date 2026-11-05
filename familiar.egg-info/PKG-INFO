@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: familiar
+Version: 0.1.0
+Summary: A desktop companion that shows what Claude Code is doing, in your persona's voice.
+License: MIT
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: pillow>=10
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.11
+Requires-Dist: psutil>=5.9
+Dynamic: license-file

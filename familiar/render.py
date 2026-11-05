@@ -1,0 +1,132 @@
+"""Pure PIL drawing: sprite + speech bubble + status footer. No windowing here, so it can be previewed headless."""
+import datetime
+from PIL import Image, ImageDraw, ImageFont
+
+CW = 330
+FOOTER_H = 124
+BG, EDGE = (10, 16, 30, 222), (60, 150, 210, 200)
+COOL, WARM, HOT, DIM, TEXT = (120, 220, 255, 255), (255, 196, 90, 255), (255, 110, 110, 255), (140, 165, 190, 255), (220, 236, 250, 255)
+
+
+def font(size, bold=False):
+    for name in (["seguisb.ttf", "segoeuib.ttf", "DejaVuSans-Bold.ttf"] if bold else ["segoeui.ttf", "DejaVuSans.ttf"]):
+        for base in ("C:/Windows/Fonts/", "/usr/share/fonts/truetype/dejavu/", "/Library/Fonts/", ""):
+            try:
+                return ImageFont.truetype(base + name, size)
+            except Exception:
+                pass
+    return ImageFont.load_default()
+
+
+F_BUBBLE, F_CELL, F_HEAD = font(14), font(12, True), font(11, True)
+
+
+def level(v, warm, hot):
+    if v is None:
+        return DIM
+    return COOL if v < warm else (WARM if v < hot else HOT)
+
+
+def until(iso):
+    try:
+        s = (datetime.datetime.fromisoformat(iso.replace("Z", "+00:00")) - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+    except Exception:
+        return ""
+    if s <= 0:
+        return "now"
+    d, h, m = int(s // 86400), int(s % 86400 // 3600), int(s % 3600 // 60)
+    return "%dd %dh" % (d, h) if d else "%dh %02dm" % (h, m)
+
+
+def wrap(dr, text, width, fnt):
+    lines, cur = [], ""
+    for w in text.split():
+        nxt = (cur + " " + w).strip()
+        if dr.textlength(nxt, font=fnt) <= width:
+            cur = nxt
+        else:
+            lines.append(cur)
+            cur = w
+    lines.append(cur)
+    return lines[:6]
+
+
+def footer(dr, x0, y0, w, sysd, claude, tokens, err=None):
+    """Table:            CPU   GPU   RAM
+                LOAD %    12    87    61
+                TEMP °C    -    62     -
+                POWER W    -   173     -
+       then Claude 5h / week meters and tokens today."""
+    dr.rounded_rectangle([x0, y0, x0 + w, y0 + FOOTER_H - 2], radius=11, fill=BG, outline=EDGE, width=1)
+    cpu, gpu, ram = (sysd or {}).get("cpu", {}), (sysd or {}).get("gpu", {}), (sysd or {}).get("ram", {})
+    label_w, col_w = 72, (w - 20 - 72) / 3
+    lx, top = x0 + 10, y0 + 5
+    for i, h in enumerate(("CPU", "GPU", "RAM")):
+        cx = lx + label_w + col_w * i + col_w / 2
+        dr.text((cx - dr.textlength(h, font=F_HEAD) / 2, top), h, font=F_HEAD, fill=DIM)
+    rows = [
+        ("LOAD %", [(cpu.get("load"), 70, 90, "%d"), (gpu.get("load"), 70, 90, "%d"), (ram.get("load"), 75, 90, "%d")]),
+        ("TEMP °C", [(cpu.get("temp"), 75, 88, "%d"), (gpu.get("temp"), 70, 80, "%d"), (None, 0, 0, "")]),
+        ("POWER W", [(cpu.get("power"), 1e9, 1e9, "%d"), (gpu.get("power"), 1e9, 1e9, "%d"), (None, 0, 0, "")]),
+    ]
+    if ram.get("free_gb") is not None:  # RAM has no temp/power: show free and total instead
+        rows[1][1][2] = (ram["free_gb"], -1, -1, "%.1fG free")
+        rows[2][1][2] = (ram.get("total_gb"), 1e9, 1e9, "of %.0fG")
+    for r, (label, cells) in enumerate(rows):
+        y = top + 15 + r * 15
+        dr.text((lx, y), label, font=F_HEAD, fill=DIM)
+        for i, (v, warm, hot, fmt) in enumerate(cells):
+            if label == "TEMP °C" and i == 2 and v is not None:
+                col = HOT if v < 2.5 else (WARM if v < 4 else COOL)
+            else:
+                col = level(v, warm, hot)
+            s = (fmt % v) if v is not None and fmt else "–"
+            cx = lx + label_w + col_w * i + col_w / 2
+            dr.text((cx - dr.textlength(s, font=F_CELL) / 2, y - 1), s, font=F_CELL, fill=col if v is not None else DIM)
+    y = top + 15 + 3 * 15 + 4
+    dr.line([(lx, y - 2), (x0 + w - 10, y - 2)], fill=(40, 60, 85, 255), width=1)
+
+    def meter(x, y, label, pct, tail, bw):
+        dr.text((x, y), label, font=F_HEAD, fill=DIM)
+        bx = x + label_w
+        dr.rounded_rectangle([bx, y + 3, bx + bw, y + 12], radius=4, fill=(30, 42, 62, 255))
+        c = level(pct, 70, 90)
+        if pct:
+            dr.rounded_rectangle([bx, y + 3, bx + max(6, bw * min(pct, 100) / 100), y + 12], radius=4, fill=c)
+        dr.text((bx + bw + 6, y - 1), "%d%%  %s" % (pct, tail), font=F_CELL, fill=c)
+
+    if claude and (claude.get("five") or claude.get("week")):
+        f5, wk = claude.get("five") or {}, claude.get("week") or {}
+        meter(lx, y + 2, "CLAUDE 5H", round(f5.get("pct", 0)), "resets " + until(f5.get("resets") or ""), 90)
+        meter(lx, y + 17, "WEEK", round(wk.get("pct", 0)), "resets " + until(wk.get("resets") or ""), 90)
+    else:
+        dr.text((lx, y + 2), "CLAUDE  " + ("usage unavailable" if err else "loading…"), font=F_HEAD, fill=DIM)
+    if tokens is not None:
+        dr.text((lx, y + 32), "TODAY", font=F_HEAD, fill=DIM)
+        t = ("%.1fM" % (tokens / 1e6) if tokens >= 1e6 else "%dk" % (tokens // 1000)) + " tokens (incl. cache)"
+        dr.text((lx + label_w, y + 31), t, font=F_CELL, fill=TEXT)
+
+
+def compose(sprite, bob, bubble, stats, ch):
+    """stats = None or dict(system, claude, tokens, err)."""
+    img = Image.new("RGBA", (CW, ch), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(img)
+    base = ch - (FOOTER_H + 6 if stats else 8)
+    sx, sy = (CW - sprite.width) // 2, base - sprite.height + bob
+    img.alpha_composite(sprite, (sx, max(sy, 0)))
+    if stats:
+        footer(dr, 4, ch - FOOTER_H - 2, CW - 8, stats.get("system"), stats.get("claude"), stats.get("tokens"), stats.get("err"))
+    if bubble:
+        lines = wrap(dr, bubble, CW - 54, F_BUBBLE)
+        lh = 19
+        bw = int(max(dr.textlength(ln, font=F_BUBBLE) for ln in lines)) + 24
+        bh = lh * len(lines) + 14
+        bx = (CW - bw) // 2
+        by = max(2, base - sprite.height - bh - 14)
+        dr.rounded_rectangle([bx, by, bx + bw, by + bh], radius=12, fill=(12, 20, 36, 238), outline=(76, 201, 255, 255), width=2)
+        tx = CW // 2 + 18
+        dr.polygon([(tx - 9, by + bh - 1), (tx + 5, by + bh - 1), (tx - 6, by + bh + 11)], fill=(12, 20, 36, 238))
+        dr.line([(tx - 9, by + bh), (tx - 6, by + bh + 11), (tx + 5, by + bh)], fill=(76, 201, 255, 255), width=2)
+        for i, ln in enumerate(lines):
+            dr.text((bx + 12, by + 6 + i * lh), ln, font=F_BUBBLE, fill=(232, 244, 255, 255))
+    return img

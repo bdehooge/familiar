@@ -1,0 +1,102 @@
+{
+    "name":  "Orion",
+    "description":  "Orion, a chibi white spirit fox (kitsune) with electric-blue circuit markings on the fur, bright blue eyes, a light gray hoodie and exactly one fluffy tail, drawn in flat 2D cel-shading with bold dark outlines",
+    "reference":  "reference.jpg",
+    "scale":  0.5,
+    "greeting":  "Orion\u0027s in the den. Right-click me for options.",
+    "working_phrases":  {
+                            "think":  [
+                                          "Sniffing the air",
+                                          "Ears perked",
+                                          "Outfoxing it",
+                                          "Plotting mischief",
+                                          "Twitching whiskers",
+                                          "Tail-twitching",
+                                          "Whisker-checking"
+                                      ],
+                            "read":  [
+                                         "Following the scent",
+                                         "Nose to the trail",
+                                         "Tracking pawprints",
+                                         "Snuffling"
+                                     ],
+                            "shell":  [
+                                          "Burrowing",
+                                          "Digging a den",
+                                          "Mousing"
+                                      ],
+                            "edit":  [
+                                         "Pouncing",
+                                         "Stalking the bug",
+                                         "Caching a bone",
+                                         "Hoarding shinies"
+                                     ],
+                            "web":  [
+                                        "Prowling",
+                                        "Fox-trotting",
+                                        "Scampering"
+                                    ],
+                            "agent":  [
+                                          "Calling the skulk"
+                                      ],
+                            "memory":  [
+                                           "Caching a bone",
+                                           "Tracking pawprints"
+                                       ],
+                            "media":  [
+                                          "Lighting kitsunebi"
+                                      ],
+                            "wait":  [
+                                         "Guarding the den"
+                                     ]
+                        },
+    "done_phrases":  [
+                         "Done. Back to the den.",
+                         "Caught it. Your turn.",
+                         "Finished sniffing around."
+                     ],
+    "boops":  [
+                  "Boop received.",
+                  "Yes? I was busy hoarding trivia.",
+                  "+1 morale. Carry on.",
+                  "Careful, the circuitry tickles.",
+                  "Still here. Still warm."
+              ],
+    "quips":  [
+                  "Porch light\u0027s on in your cache.",
+                  "Drink some water. I\u0027ll guard the RAM.",
+                  "Keep your hood up and your teeth sharp.",
+                  "I\u0027m not napping. I\u0027m thermally supervising.",
+                  "Bold plan? Show me the math first.",
+                  "Hoarded a shiny new 404 page today. Don\u0027t ask.",
+                  "Stretch your paws. Shoulders down."
+              ],
+    "late_night":  [
+                       "It\u0027s late. The servers can watch themselves.",
+                       "My lantern\u0027s dimming. Yours should too.",
+                       "Close the tabs. The forest will be here tomorrow."
+                   ],
+    "frame_sec":  {
+                      "idle":  0.3,
+                      "sleep":  0.5,
+                      "happy":  0.11,
+                      "alert":  0.13,
+                      "think":  0.2,
+                      "gpu":  0.45,
+                      "work":  0.12,
+                      "wait":  0.25,
+                      "sad":  0.35
+                  },
+    "poses":  {
+                  "think":  "thinking, paw on chin beside a small floating blue foxfire flame",
+                  "gpu":  "napping belly-down on a small black graphics card with blue lights",
+                  "work":  "sitting and typing on a tiny glowing laptop, focused",
+                  "wait":  "sitting upright looking at the viewer expectantly with one paw raised in a little wave",
+                  "sad":  "sad, ears drooping, small frown, tail curled around himself"
+              },
+    "motions":  {
+                    "idle":  "gentle breathing, the tail sways slowly, one ear twitches, one blink",
+                    "think":  "the foxfire flame flickers and bobs, his eyes glance up and to the side, the tail swishes",
+                    "sad":  "a slow sigh, ears droop lower then lift slightly, the tail tip twitches"
+                }
+}

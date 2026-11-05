@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "familiar"
+version = "0.1.0"
+description = "A desktop companion that shows what Claude Code is doing, in your persona's voice."
+requires-python = ">=3.10"
+dependencies = ["pillow>=10", "numpy>=1.26", "scipy>=1.11", "psutil>=5.9"]
+license = {text = "MIT"}
+
+[project.scripts]
+familiar = "familiar.app:main"
+
+[tool.setuptools]
+packages = ["familiar", "familiar.plugins"]
