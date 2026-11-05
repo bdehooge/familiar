@@ -31,3 +31,13 @@ def test_grid_lines_are_not_part_of_the_character(tmp_path):
         assert all(c is not None for c in cs)
         for c in cs:
             assert c.shape[:2] == (60, 40), (line, c.shape)
+
+
+def test_register_flags_frames_it_could_not_line_up():
+    """A frame that moved further than MAXSHIFT can't be registered; anim must say so instead of shipping jitter."""
+    blob = np.zeros((120, 80, 4), np.uint8)
+    blob[20:100, 15:65] = (230, 240, 255, 255)
+    far = np.zeros((120 + frames.MAXSHIFT + 15, 80, 4), np.uint8)
+    far[95:175, 15:65] = (230, 240, 255, 255)  # same body, drawn 75px lower in its cell (a jump frame)
+    _, shifts = frames.register([blob, blob.copy(), far])
+    assert frames.unaligned(shifts) == [2]

@@ -30,7 +30,9 @@ DEFAULT_POSES = {
 DEFAULT_MOTION = {
     "idle": "gentle breathing, a slow sway, one blink in the middle of the loop",
     "sleep": "slow breathing, the Z drifts upward and fades, a new one appears at the start",
-    "happy": "a full bounce: crouch, spring up, top of the jump, come down, land, recover",
+    "happy": ("a cheer in place: the raised paws pump up and down, a small springy bob of the body, the tail wags fast; "
+              "the face keeps the same expression in every frame (if the eyes are shut in happy arcs, they stay shut); "
+              "the body never leaves its spot, no jumping or crouching"),
     "alert": "a quick nervous shake left and right, the exclamation mark pulses bigger and smaller",
     "think": "eyes glance up and to the side, small head tilt, fingers tap the chin",
     "gpu": "slow breathing, the lights on the graphics card blink in a chasing pattern",

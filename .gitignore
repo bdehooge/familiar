@@ -4,3 +4,4 @@ personas/*/gen/
 *.bak-*
 *.egg-info/
 personas/*/gen/
+demo/

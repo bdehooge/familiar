@@ -105,6 +105,11 @@ def register(frames):
     return [p.crop(box) for p in placed], shifts
 
 
+def unaligned(shifts):
+    """Indexes of frames whose registration hit the MAXSHIFT search limit: the body moved too far to line up."""
+    return [i for i, (dy, dx) in enumerate(shifts) if max(abs(int(dy)), abs(int(dx))) >= MAXSHIFT]
+
+
 def resize(a, k):
     im = Image.fromarray(a)
     return np.asarray(im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS))
@@ -134,7 +139,8 @@ def cmd_anim(a):
     base_p = os.path.join(a.out, a.mood + "_0.png")
     if not os.path.exists(base_p):
         sys.exit("run `base` first: missing " + base_p)
-    base = np.asarray(Image.open(base_p).convert("RGBA"))
+    base_im = Image.open(base_p).convert("RGBA")
+    base = np.asarray(base_im.crop(base_im.getbbox()))  # a previous anim run leaves registration padding on the base
     cs = [c for c in cells(key_green(a.sheet), cols, rows) if c is not None]
     # Scale the animation to the base pose by body area (sqrt), median over frames: robust to wide/flat poses and
     # to one stretched frame, where bounding-box height is not.
@@ -146,7 +152,11 @@ def cmd_anim(a):
         os.remove(f)
     for i, im in enumerate(imgs):
         im.save(os.path.join(a.out, "%s_%d.png" % (a.mood, i)), optimize=True)
-    print(a.mood, "%d frames (base + %d), scale %.3f, shifts %s" % (len(imgs), len(cs), k, shifts[1:]))
+    print(a.mood, "%d frames (base + %d), scale %.3f, shifts %s" % (len(imgs), len(cs), k, [(int(y), int(x)) for y, x in shifts[1:]]))
+    bad = unaligned(shifts)
+    if bad:
+        print("WARNING %s: frames %s moved more than %dpx and could not be lined up; the loop will jitter. "
+              "Regenerate this sheet with a motion that stays in place." % (a.mood, bad, MAXSHIFT))
 
 
 def cmd_preview(a):
