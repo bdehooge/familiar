@@ -4,7 +4,7 @@ A desktop companion for **Claude Code**. It sits on your desktop, shows what Cla
 
 ![Orion, the bundled persona, going through all 9 moods and a Claude Code prompt](docs/demo.gif)
 
-- **Live agent state** through Claude Code hooks: thinking, reading, running commands, editing, waiting on you, done. Each activity gets its own mood animation and phrase ("Following the scent…", "Burrowing…").
+- **Live agent state** through Claude Code hooks: thinking, reading, running commands, editing, waiting on you (permission prompts, questions and plan approval), done. Each activity gets its own mood animation and phrase ("Following the scent…", "Burrowing…").
 - **Status footer:** CPU / GPU / RAM load, temperature and power in one table, then your Claude 5-hour and weekly usage (and Codex, if you use it) as plain percentages with reset times, and tokens used today.
 - **Persona packs:** your character, 9 moods × 10 frames, plus the phrases they say. Generate the art with the image provider you choose.
 - **Plugins** for anything else you want it to watch (an alert file from your own tooling, for example).

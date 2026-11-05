@@ -8,12 +8,33 @@ import json, os, sys, time
 STATE = os.path.join(os.path.expanduser("~"), ".familiar", "cc_state.json")
 
 
+# Tools that block on the user. They only show up as PreToolUse, never as a Notification.
+ASK_TOOLS = ("AskUserQuestion", "ExitPlanMode")
+# Notification types that mean "nothing to approve": the 60s idle nudge, login done.
+IDLE_NOTES = ("idle_prompt", "auth_success")
+
+
+def state_for(ev, h):
+    if ev in ("Stop", "SessionEnd"):
+        return "idle"
+    if ev == "Notification":
+        kind = h.get("notification_type") or ""
+        if kind in IDLE_NOTES:
+            return "idle"
+        if not kind and "waiting for your input" in (h.get("message") or ""):
+            return "idle"
+        return "waiting"
+    if ev == "PreToolUse" and h.get("tool_name") in ASK_TOOLS:
+        return "waiting"
+    return "working"
+
+
 def main():
     try:
         h = json.loads(sys.stdin.read() or "{}")
         ev = h.get("hook_event_name") or (sys.argv[1] if len(sys.argv) > 1 else "")
         sid = h.get("session_id") or "unknown"
-        state = "idle" if ev in ("Stop", "SessionEnd") else ("waiting" if ev == "Notification" else "working")
+        state = state_for(ev, h)
         try:
             with open(STATE, encoding="utf-8") as f:
                 cur = json.load(f)
