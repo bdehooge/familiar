@@ -51,7 +51,7 @@ class Poller(threading.Thread):
     def __init__(self, plugins):
         super().__init__()
         self.plugins = plugins
-        self.data = {"system": None, "claude": None, "tokens": None, "err": None, "alerts": []}
+        self.data = {"system": None, "claude": None, "codex": None, "tokens": None, "err": None, "alerts": []}
 
     def run(self):
         next_claude = next_tokens = 0
@@ -68,6 +68,10 @@ class Poller(threading.Thread):
                     d["claude"], d["err"] = sources.claude_usage(), None
                 except Exception as e:
                     d["err"] = str(e)[:80]
+                try:
+                    d["codex"] = sources.codex_usage()
+                except Exception:
+                    log("codex " + traceback.format_exc())
             if now >= next_tokens:
                 next_tokens = now + 60
                 try:
@@ -267,7 +271,7 @@ class Familiar:
         if not self.show_stats:
             return None
         d = self.poller.data
-        return {"system": d.get("system"), "claude": d.get("claude"), "tokens": d.get("tokens"), "err": d.get("err")}
+        return {"system": d.get("system"), "claude": d.get("claude"), "codex": d.get("codex"), "tokens": d.get("tokens"), "err": d.get("err")}
 
     def render(self, force=False):
         if time.time() > self.bubble_until:

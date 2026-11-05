@@ -84,6 +84,33 @@ def claude_usage():
     return {"five": pick(u.get("five_hour")), "week": pick(u.get("seven_day"))}
 
 
+def codex_usage():
+    """Codex (ChatGPT plan) rate-limit windows, from the token the Codex CLI stores in ~/.codex/auth.json; read-only.
+    Same undocumented endpoint the Codex CLI's /status uses, so it may change. Returns None when Codex isn't signed in."""
+    path = os.path.join(HOME, ".codex", "auth.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        t = json.load(f).get("tokens") or {}
+    if not t.get("access_token"):
+        return None
+    req = urllib.request.Request("https://chatgpt.com/backend-api/wham/usage", headers={
+        "Authorization": "Bearer " + t["access_token"], "ChatGPT-Account-Id": t.get("account_id", ""), "User-Agent": "familiar/0.1"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        u = json.load(r)
+
+    def win(w):
+        if not w:
+            return None
+        secs = w.get("limit_window_seconds") or 0
+        name = "%dd" % (secs // 86400) if secs >= 86400 else "%dh" % (secs // 3600)
+        resets = w.get("reset_at") and datetime.datetime.fromtimestamp(w["reset_at"], datetime.timezone.utc).isoformat()
+        return {"pct": float(w.get("used_percent") or 0), "resets": resets, "name": name}
+
+    rl = u.get("rate_limit") or {}
+    return {"primary": win(rl.get("primary_window")), "secondary": win(rl.get("secondary_window")), "plan": u.get("plan_type")}
+
+
 _tok_cache = {"day": None, "files": {}}
 
 

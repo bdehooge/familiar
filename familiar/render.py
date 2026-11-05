@@ -51,12 +51,12 @@ def wrap(dr, text, width, fnt):
     return lines[:6]
 
 
-def footer(dr, x0, y0, w, sysd, claude, tokens, err=None):
+def footer(dr, x0, y0, w, sysd, claude, tokens, err=None, codex=None):
     """Table:            CPU   GPU   RAM
                 LOAD %    12    87    61
                 TEMP °C    -    62     -
                 POWER W    -   173     -
-       then Claude 5h / week meters and tokens today."""
+       then CLAUDE 5h/wk %, CODEX window % (when signed in) and tokens today."""
     dr.rounded_rectangle([x0, y0, x0 + w, y0 + FOOTER_H - 2], radius=11, fill=BG, outline=EDGE, width=1)
     cpu, gpu, ram = (sysd or {}).get("cpu", {}), (sysd or {}).get("gpu", {}), (sysd or {}).get("ram", {})
     label_w, col_w = 72, (w - 20 - 72) / 3
@@ -86,25 +86,35 @@ def footer(dr, x0, y0, w, sysd, claude, tokens, err=None):
     y = top + 15 + 3 * 15 + 4
     dr.line([(lx, y - 2), (x0 + w - 10, y - 2)], fill=(40, 60, 85, 255), width=1)
 
-    def meter(x, y, label, pct, tail, bw):
-        dr.text((x, y), label, font=F_HEAD, fill=DIM)
-        bx = x + label_w
-        dr.rounded_rectangle([bx, y + 3, bx + bw, y + 12], radius=4, fill=(30, 42, 62, 255))
-        c = level(pct, 70, 90)
-        if pct:
-            dr.rounded_rectangle([bx, y + 3, bx + max(6, bw * min(pct, 100) / 100), y + 12], radius=4, fill=c)
-        dr.text((bx + bw + 6, y - 1), "%d%%  %s" % (pct, tail), font=F_CELL, fill=c)
+    half = (w - 20 - label_w) / 2
 
+    def usage_row(y, label, wins):
+        """label, then up to two windows as 'NAME 38% · 2h 10m', colored by how full they are. No bars: % is enough."""
+        dr.text((lx, y + 1), label, font=F_HEAD, fill=DIM)
+        for i, (name, wd) in enumerate(wins[:2]):
+            x = lx + label_w + half * i
+            pct = round(wd.get("pct", 0))
+            dr.text((x, y + 1), name, font=F_HEAD, fill=DIM)
+            x += dr.textlength(name + " ", font=F_HEAD)
+            s = "%d%%" % pct
+            dr.text((x, y), s, font=F_CELL, fill=level(pct, 70, 90))
+            t = until(wd.get("resets") or "")
+            if t:
+                dr.text((x + dr.textlength(s + " ", font=F_CELL), y + 1), "· " + t, font=F_HEAD, fill=DIM)
+
+    yy = y + 2
     if claude and (claude.get("five") or claude.get("week")):
-        f5, wk = claude.get("five") or {}, claude.get("week") or {}
-        meter(lx, y + 2, "CLAUDE 5H", round(f5.get("pct", 0)), "resets " + until(f5.get("resets") or ""), 90)
-        meter(lx, y + 17, "WEEK", round(wk.get("pct", 0)), "resets " + until(wk.get("resets") or ""), 90)
+        usage_row(yy, "CLAUDE", [(n, v) for n, v in (("5h", claude.get("five")), ("wk", claude.get("week"))) if v])
     else:
-        dr.text((lx, y + 2), "CLAUDE  " + ("usage unavailable" if err else "loading…"), font=F_HEAD, fill=DIM)
+        dr.text((lx, yy + 1), "CLAUDE  " + ("usage unavailable" if err else "loading…"), font=F_HEAD, fill=DIM)
+    yy += 15
+    if codex and (codex.get("primary") or codex.get("secondary")):
+        usage_row(yy, "CODEX", [(v["name"], v) for v in (codex.get("primary"), codex.get("secondary")) if v])
+        yy += 15
     if tokens is not None:
-        dr.text((lx, y + 32), "TODAY", font=F_HEAD, fill=DIM)
-        t = ("%.1fM" % (tokens / 1e6) if tokens >= 1e6 else "%dk" % (tokens // 1000)) + " tokens (incl. cache)"
-        dr.text((lx + label_w, y + 31), t, font=F_CELL, fill=TEXT)
+        dr.text((lx, yy + 1), "TODAY", font=F_HEAD, fill=DIM)
+        t = ("%.1fM" % (tokens / 1e6) if tokens >= 1e6 else "%dk" % (tokens // 1000)) + " Claude tokens (incl. cache)"
+        dr.text((lx + label_w, yy), t, font=F_CELL, fill=TEXT)
 
 
 def compose(sprite, bob, bubble, stats, ch):
@@ -115,7 +125,7 @@ def compose(sprite, bob, bubble, stats, ch):
     sx, sy = (CW - sprite.width) // 2, base - sprite.height + bob
     img.alpha_composite(sprite, (sx, max(sy, 0)))
     if stats:
-        footer(dr, 4, ch - FOOTER_H - 2, CW - 8, stats.get("system"), stats.get("claude"), stats.get("tokens"), stats.get("err"))
+        footer(dr, 4, ch - FOOTER_H - 2, CW - 8, stats.get("system"), stats.get("claude"), stats.get("tokens"), stats.get("err"), stats.get("codex"))
     if bubble:
         lines = wrap(dr, bubble, CW - 54, F_BUBBLE)
         lh = 19
